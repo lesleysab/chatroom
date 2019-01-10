@@ -1,25 +1,54 @@
-import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import { ChatManager, TokenProvider } from "@pusher/chatkit-client";
+import MessageList from "./MessageList";
+import SendMessageForm from "./SendMessageForm";
+import { tokenUrl, instanceLocator } from "./config";
 
-class App extends Component {
+class App extends React.Component {
+  constructor() {
+    super();
+    this.state = {
+      messages: []
+    };
+    this.sendMessage = this.sendMessage.bind(this);
+  }
+
+  componentDidMount() {
+    const chatManager = new ChatManager({
+      instanceLocator,
+      userId: "Provider",
+      tokenProvider: new TokenProvider({
+        url: tokenUrl
+      })
+    });
+
+    chatManager.connect().then(currentUser => {
+      this.currentUser = currentUser;
+      this.currentUser.subscribeToRoom({
+        roomId: "19377628",
+        hooks: {
+          onMessage: message => {
+            console.log("message.text: ", message.text);
+            this.setState({
+              messages: [...this.state.messages, message]
+            });
+          }
+        }
+      });
+    });
+  }
+  sendMessage(text) {
+    this.currentUser.sendMessage({
+      text,
+      roomId: "19377628"
+    });
+  }
+
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
+      <div className="app">
+        <MessageList messages={this.state.messages} />
+        <SendMessageForm sendMessage={this.sendMessage} />
       </div>
     );
   }
